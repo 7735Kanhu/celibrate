@@ -14,10 +14,8 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["@prisma/client", "bcryptjs"],
-  experimental: {
-    outputFileTracingIncludes: {
-      "/**": ["./prisma/dev.db"],
-    },
+  outputFileTracingIncludes: {
+    "/**": ["./prisma/dev.db"],
   },
 };
 
