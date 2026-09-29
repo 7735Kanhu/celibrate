@@ -1,0 +1,255 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  password      String
+  name          String
+  phone         String?
+  city          String?
+  role          String      @default("CUSTOMER") // CUSTOMER, ADMIN
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  favorites     Favorite[]
+  enquiries     Enquiry[]
+  reviews       Review[]
+}
+
+model City {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  state       String
+  image       String
+  venueCount  Int      @default(0)
+  isPopular   Boolean  @default(false)
+  areas       Area[]
+  venues      Venue[]
+  createdAt   DateTime @default(now())
+}
+
+model Area {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  venues    Venue[]
+  createdAt DateTime @default(now())
+
+  @@unique([cityId, name])
+}
+
+model VenueCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique // Kalyan Mandap, Banquet Hall, Hotel, Resort, Lawn, etc.
+  slug        String   @unique
+  description String?
+  venues      VenueCategoryMapping[]
+}
+
+model EventCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique // Wedding, Birthday, Engagement, Reception, etc.
+  slug        String   @unique
+  description String
+  image       String
+  icon        String
+  enquiries   Enquiry[]
+}
+
+model Venue {
+  id            String      @id @default(uuid())
+  name          String
+  slug          String      @unique
+  type          String      // Kalyan Mandap, Banquet Hall, etc.
+  description   String
+  address       String
+  cityId        String
+  city          City        @relation(fields: [cityId], references: [id])
+  areaId        String?
+  area          Area?       @relation(fields: [areaId], references: [id])
+  rating        Float       @default(4.5)
+  reviewCount   Int         @default(0)
+  capacity      Int         // Max guest capacity
+  indoorCap     Int?
+  outdoorCap    Int?
+  parkingCap    Int?
+  roomCount     Int?
+  startingPrice Float       // e.g. 100000
+  isVerified    Boolean     @default(true)
+  isFeatured    Boolean     @default(false)
+  latitude      Float?
+  longitude     Float?
+  nearbyInfo    String?     // JSON string or text info about airport/railway
+  policies      String?     // Cancellation, booking policies JSON/text
+  faqs          String?     // JSON array of Q&A
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  images        VenueImage[]
+  amenities     VenueAmenity[]
+  packages      VenuePackage[]
+  categories    VenueCategoryMapping[]
+  reviews       Review[]
+  favorites     Favorite[]
+  enquiries     Enquiry[]
+}
+
+model VenueCategoryMapping {
+  venueId    String
+  categoryId String
+  venue      Venue         @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  category   VenueCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([venueId, categoryId])
+}
+
+model VenueImage {
+  id        String   @id @default(uuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  url       String
+  caption   String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+}
+
+model VenueAmenity {
+  id        String   @id @default(uuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name      String   // AC, Parking, Generator, Kitchen, Bridal Room, etc.
+  icon      String?
+}
+
+model VenuePackage {
+  id          String   @id @default(uuid())
+  venueId     String
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name        String   // Basic, Premium, Luxury
+  price       Float
+  description String?
+  includes    String   // JSON list or bullet text of included features
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  venueId     String
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  userName    String
+  rating      Int      // 1 to 5
+  comment     String
+  isVerified  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, venueId])
+}
+
+model Enquiry {
+  id              String      @id @default(uuid())
+  enquiryNumber   String      @unique // e.g. ENQ-202609-10245
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  venueId         String
+  venue           Venue       @relation(fields: [venueId], references: [id])
+  eventCategoryId String?
+  eventCategory   EventCategory? @relation(fields: [eventCategoryId], references: [id])
+  
+  customerName    String
+  customerPhone   String
+  customerEmail   String
+  eventType       String      // Wedding, Birthday, etc.
+  eventDate       DateTime
+  guestCount      Int
+  preferredTime   String?     // Morning, Evening, Full Day
+  budget          String?     // Under 50k, 1-2 Lakh, etc.
+  message         String?
+  status          String      @default("Submitted") // Submitted, Received, Contacted, Discussion, Quotation, Confirmed
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  services        EnquiryService[]
+  statusHistory   EnquiryStatusHistory[]
+}
+
+model EnquiryService {
+  id          String   @id @default(uuid())
+  enquiryId   String
+  enquiry     Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  serviceName String   // Venue, Catering, Decoration, Photography, DJ, Rooms, Makeup, Transportation, Other
+}
+
+model EnquiryStatusHistory {
+  id        String   @id @default(uuid())
+  enquiryId String
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  status    String   // Submitted, Received, Contacted, etc.
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  name        String
+  category    String   // Catering, Decoration, Photography, DJ, Makeup, Mehendi, Event Planner, Invitation, Transportation
+  city        String
+  rating      Float    @default(4.8)
+  reviewCount Int      @default(32)
+  startingPrice String // e.g. ₹500 per plate, ₹25,000 per event
+  image       String
+  description String
+  phone       String
+  isVerified  Boolean  @default(true)
+  services    VendorService[]
+  createdAt   DateTime @default(now())
+}
+
+model VendorService {
+  id          String   @id @default(uuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       String?
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  excerpt     String
+  content     String
+  image       String
+  author      String   @default("Celibrate Team")
+  category    String
+  readTime    String   @default("5 min read")
+  createdAt   DateTime @default(now())
+}
