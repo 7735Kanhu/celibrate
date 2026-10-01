@@ -36,15 +36,13 @@ export default async function MyEnquiriesPage() {
   });
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Submitted": return "bg-gray-100 text-gray-700 border-gray-200";
-      case "Received": return "bg-blue-50 text-blue-700 border-blue-200";
-      case "Contacted": return "bg-purple-50 text-purple-700 border-purple-200";
-      case "Discussion": return "bg-orange-50 text-orange-700 border-orange-200";
-      case "Quotation": return "bg-amber-50 text-amber-700 border-amber-200";
-      case "Confirmed": return "bg-green-50 text-green-700 border-green-200";
-      default: return "bg-gray-100 text-gray-700 border-gray-200";
-    }
+    const s = status?.toUpperCase();
+    if (s === "BOOKED" || s === "CONFIRMED" || s === "COMPLETED") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (s === "QUOTATION_SENT" || s === "QUOTATION") return "bg-purple-50 text-purple-700 border-purple-200";
+    if (s === "SITE_VISIT") return "bg-amber-50 text-amber-700 border-amber-200";
+    if (s === "CONTACTED" || s === "INTERESTED" || s === "NEGOTIATION" || s === "DISCUSSION") return "bg-blue-50 text-blue-700 border-blue-200";
+    if (s === "CANCELLED" || s === "LOST") return "bg-rose-50 text-rose-700 border-rose-200";
+    return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
   return (

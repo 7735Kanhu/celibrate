@@ -1,9 +1,16 @@
 import Link from "next/link";
-import { Heart, User, Search, Menu } from "lucide-react";
+import { Heart, User, Search, Shield, Building2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function Header() {
   const user = await getCurrentUser();
+
+  const getDashboardLink = () => {
+    if (!user) return "/login";
+    if (user.role === "ADMIN") return "/admin/dashboard";
+    if (user.role === "VENUE_OWNER") return "/owner/dashboard";
+    return "/profile";
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 shadow-sm">
@@ -14,40 +21,59 @@ export default async function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-7">
           <Link href="/" className="text-sm font-medium text-gray-700 hover:text-brand-500 transition-colors">Home</Link>
           <Link href="/venues" className="text-sm font-medium text-gray-700 hover:text-brand-500 transition-colors">Venues</Link>
           <Link href="/categories" className="text-sm font-medium text-gray-700 hover:text-brand-500 transition-colors">Events</Link>
           <Link href="/cities" className="text-sm font-medium text-gray-700 hover:text-brand-500 transition-colors">Cities</Link>
           <Link href="/vendors" className="text-sm font-medium text-gray-700 hover:text-brand-500 transition-colors">Vendors</Link>
-          <Link href="/offers" className="text-sm font-medium text-brand-500 hover:text-brand-600 transition-colors">Offers</Link>
+          <Link href="/blog" className="text-sm font-medium text-gray-700 hover:text-brand-500 transition-colors">Blog</Link>
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-4">
-          <Link href="/search" className="p-2 text-gray-600 hover:text-brand-500 transition-colors rounded-full hover:bg-gray-50">
+        <div className="hidden md:flex items-center gap-3">
+          <Link href="/search" className="p-2 text-gray-600 hover:text-brand-500 transition-colors rounded-full hover:bg-gray-50" title="Search venues">
             <Search className="w-5 h-5" />
           </Link>
-          <Link href="/favorites" className="p-2 text-gray-600 hover:text-brand-500 transition-colors rounded-full hover:bg-gray-50 flex items-center gap-1">
+          <Link href="/favorites" className="p-2 text-gray-600 hover:text-brand-500 transition-colors rounded-full hover:bg-gray-50 flex items-center gap-1.5" title="Favorites">
             <Heart className="w-5 h-5" />
             <span className="text-sm font-medium">Favorites</span>
           </Link>
 
           {user ? (
-            <Link href="/profile" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200">
-              <div className="w-7 h-7 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-sm">
-                {user.name.charAt(0)}
-              </div>
-              <span className="text-sm font-medium text-gray-700">{user.name.split(' ')[0]}</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href={getDashboardLink()}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200"
+              >
+                {user.role === "ADMIN" ? (
+                  <Shield className="w-4 h-4 text-brand-600" />
+                ) : user.role === "VENUE_OWNER" ? (
+                  <Building2 className="w-4 h-4 text-brand-600" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-xs">
+                    {user.name.charAt(0)}
+                  </div>
+                )}
+                <span className="text-xs font-semibold text-gray-800">
+                  {user.name.split(" ")[0]} ({user.role === "ADMIN" ? "Admin" : user.role === "VENUE_OWNER" ? "Owner" : "Customer"})
+                </span>
+              </Link>
+            </div>
           ) : (
-            <Link href="/login" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 text-sm font-medium text-gray-700">
+            <Link
+              href="/login"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 text-sm font-medium text-gray-700"
+            >
               <User className="w-4 h-4" />
               <span>Login / Register</span>
             </Link>
           )}
 
-          <Link href="/contact" className="ml-2 px-5 py-2.5 rounded-xl bg-brand-50 text-brand-600 font-semibold text-sm hover:bg-brand-100 transition-colors border border-brand-200">
+          <Link
+            href="/owner/register"
+            className="ml-1 px-4 py-2 rounded-xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors shadow-sm"
+          >
             List Your Venue
           </Link>
         </div>
@@ -57,9 +83,15 @@ export default async function Header() {
           <Link href="/search" className="p-2 text-gray-600">
             <Search className="w-5 h-5" />
           </Link>
-          <button className="p-2 text-gray-600">
-            <Menu className="w-6 h-6" />
-          </button>
+          {user ? (
+            <Link href={getDashboardLink()} className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold">
+              {user.name.charAt(0)}
+            </Link>
+          ) : (
+            <Link href="/login" className="p-2 text-gray-600">
+              <User className="w-5 h-5" />
+            </Link>
+          )}
         </div>
       </div>
     </header>

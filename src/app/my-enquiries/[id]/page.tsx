@@ -32,6 +32,11 @@ export default async function EnquiryDetailPage(props: { params: Promise<{ id: s
         include: { city: true }
       },
       services: true,
+      quotations: {
+        where: { status: { in: ["SENT", "ACCEPTED"] } },
+        include: { items: true },
+        orderBy: { createdAt: "desc" },
+      },
       statusHistory: {
         orderBy: { createdAt: "desc" }
       }
@@ -41,15 +46,13 @@ export default async function EnquiryDetailPage(props: { params: Promise<{ id: s
   if (!enquiry) notFound();
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Submitted": return "bg-gray-100 text-gray-700 border-gray-200";
-      case "Received": return "bg-blue-50 text-blue-700 border-blue-200";
-      case "Contacted": return "bg-purple-50 text-purple-700 border-purple-200";
-      case "Discussion": return "bg-orange-50 text-orange-700 border-orange-200";
-      case "Quotation": return "bg-amber-50 text-amber-700 border-amber-200";
-      case "Confirmed": return "bg-green-50 text-green-700 border-green-200";
-      default: return "bg-gray-100 text-gray-700 border-gray-200";
-    }
+    const s = status?.toUpperCase();
+    if (s === "BOOKED" || s === "CONFIRMED" || s === "COMPLETED") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (s === "QUOTATION_SENT" || s === "QUOTATION") return "bg-purple-50 text-purple-700 border-purple-200";
+    if (s === "SITE_VISIT") return "bg-amber-50 text-amber-700 border-amber-200";
+    if (s === "CONTACTED" || s === "INTERESTED" || s === "NEGOTIATION" || s === "DISCUSSION") return "bg-blue-50 text-blue-700 border-blue-200";
+    if (s === "CANCELLED" || s === "LOST") return "bg-rose-50 text-rose-700 border-rose-200";
+    return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
   return (
@@ -140,6 +143,54 @@ export default async function EnquiryDetailPage(props: { params: Promise<{ id: s
               </div>
             </div>
 
+            {/* Official Quotation from Venue if issued */}
+            {enquiry.quotations && enquiry.quotations.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Official Venue Quotation</h2>
+                    <p className="text-xs text-gray-500">Proposal generated specifically for your requirements</p>
+                  </div>
+                  <span className="font-mono text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-md border border-brand-100">
+                    {enquiry.quotations[0].quotationNumber}
+                  </span>
+                </div>
+
+                <div className="border border-gray-100 rounded-xl overflow-hidden text-xs">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50 text-[10px] uppercase text-gray-400 font-bold border-b">
+                      <tr>
+                        <th className="py-2.5 px-3">Service / Item</th>
+                        <th className="py-2.5 px-3 text-center">Qty</th>
+                        <th className="py-2.5 px-3 text-right">Unit Price</th>
+                        <th className="py-2.5 px-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {enquiry.quotations[0].items?.map((item: any) => (
+                        <tr key={item.id}>
+                          <td className="py-2.5 px-3 font-medium text-gray-800">{item.name}</td>
+                          <td className="py-2.5 px-3 text-center text-gray-500">{item.quantity}</td>
+                          <td className="py-2.5 px-3 text-right text-gray-600">₹{item.unitPrice.toLocaleString("en-IN")}</td>
+                          <td className="py-2.5 px-3 text-right font-bold text-gray-900">₹{item.total.toLocaleString("en-IN")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-between items-center bg-brand-50/60 p-4 rounded-xl border border-brand-100 text-sm">
+                  <span className="font-bold text-gray-900">Grand Total Proposal:</span>
+                  <span className="font-black text-brand-600 text-lg">₹{enquiry.quotations[0].total.toLocaleString("en-IN")}</span>
+                </div>
+
+                {enquiry.quotations[0].terms && (
+                  <div className="text-[11px] text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100 whitespace-pre-line">
+                    <strong>Terms & Notes:</strong> {enquiry.quotations[0].terms}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column (Timeline) */}

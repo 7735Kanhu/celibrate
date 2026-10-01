@@ -8,18 +8,42 @@ generator client {
 }
 
 model User {
-  id            String      @id @default(uuid())
-  email         String      @unique
+  id            String             @id @default(uuid())
+  email         String             @unique
   password      String
   name          String
   phone         String?
   city          String?
-  role          String      @default("CUSTOMER") // CUSTOMER, ADMIN
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  role          String             @default("CUSTOMER") // CUSTOMER, VENUE_OWNER, ADMIN
+  avatar        String?
+  isActive      Boolean            @default(true)
+  isVerified    Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  ownerProfile  VenueOwnerProfile?
+  venues        Venue[]            @relation("OwnerVenues")
   favorites     Favorite[]
   enquiries     Enquiry[]
   reviews       Review[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model VenueOwnerProfile {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName String
+  ownerName    String
+  phone        String
+  email        String
+  city         String
+  address      String?
+  status       String    @default("PENDING_APPROVAL") // PENDING_APPROVAL, APPROVED, SUSPENDED, REJECTED
+  verifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model City {
@@ -48,17 +72,17 @@ model Area {
 }
 
 model VenueCategory {
-  id          String   @id @default(uuid())
-  name        String   @unique // Kalyan Mandap, Banquet Hall, Hotel, Resort, Lawn, etc.
-  slug        String   @unique
+  id          String                 @id @default(uuid())
+  name        String                 @unique // Kalyan Mandap, Banquet Hall, Hotel, Resort, Lawn, etc.
+  slug        String                 @unique
   description String?
   venues      VenueCategoryMapping[]
 }
 
 model EventCategory {
-  id          String   @id @default(uuid())
-  name        String   @unique // Wedding, Birthday, Engagement, Reception, etc.
-  slug        String   @unique
+  id          String    @id @default(uuid())
+  name        String    @unique // Wedding, Birthday, Engagement, Reception, etc.
+  slug        String    @unique
   description String
   image       String
   icon        String
@@ -66,33 +90,37 @@ model EventCategory {
 }
 
 model Venue {
-  id            String      @id @default(uuid())
+  id            String                 @id @default(uuid())
+  ownerId       String?
+  owner         User?                  @relation("OwnerVenues", fields: [ownerId], references: [id])
   name          String
-  slug          String      @unique
-  type          String      // Kalyan Mandap, Banquet Hall, etc.
+  slug          String                 @unique
+  type          String                 // Kalyan Mandap, Banquet Hall, etc.
   description   String
   address       String
   cityId        String
-  city          City        @relation(fields: [cityId], references: [id])
+  city          City                   @relation(fields: [cityId], references: [id])
   areaId        String?
-  area          Area?       @relation(fields: [areaId], references: [id])
-  rating        Float       @default(4.5)
-  reviewCount   Int         @default(0)
-  capacity      Int         // Max guest capacity
+  area          Area?                  @relation(fields: [areaId], references: [id])
+  rating        Float                  @default(4.5)
+  reviewCount   Int                    @default(0)
+  capacity      Int                    // Max guest capacity
   indoorCap     Int?
   outdoorCap    Int?
   parkingCap    Int?
   roomCount     Int?
-  startingPrice Float       // e.g. 100000
-  isVerified    Boolean     @default(true)
-  isFeatured    Boolean     @default(false)
+  startingPrice Float                  // e.g. 100000
+  status        String                 @default("APPROVED") // PENDING, APPROVED, REJECTED, SUSPENDED, INACTIVE
+  isVerified    Boolean                @default(true)
+  isFeatured    Boolean                @default(false)
+  isArchived    Boolean                @default(false)
   latitude      Float?
   longitude     Float?
-  nearbyInfo    String?     // JSON string or text info about airport/railway
-  policies      String?     // Cancellation, booking policies JSON/text
-  faqs          String?     // JSON array of Q&A
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  nearbyInfo    String?                // JSON string or text info about airport/railway
+  policies      String?                // Cancellation, booking policies JSON/text
+  faqs          String?                // JSON array of Q&A
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 
   images        VenueImage[]
   amenities     VenueAmenity[]
@@ -101,6 +129,14 @@ model Venue {
   reviews       Review[]
   favorites     Favorite[]
   enquiries     Enquiry[]
+  quotations    Quotation[]
+  bookings      Booking[]
+  payments      BookingPayment[]
+  followUps     EnquiryFollowUp[]
+  siteVisits    SiteVisit[]
+  events        Event[]
+  expenses      EventExpense[]
+  commissions   Commission[]
 }
 
 model VenueCategoryMapping {
@@ -118,39 +154,46 @@ model VenueImage {
   venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
   url       String
   caption   String?
+  category  String   @default("Main Hall") // Exterior, Main Hall, Stage, Dining, Rooms, Parking, Garden, Decoration
   isPrimary Boolean  @default(false)
   sortOrder Int      @default(0)
 }
 
 model VenueAmenity {
-  id        String   @id @default(uuid())
-  venueId   String
-  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  name      String   // AC, Parking, Generator, Kitchen, Bridal Room, etc.
-  icon      String?
+  id      String  @id @default(uuid())
+  venueId String
+  venue   Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name    String  // AC, Parking, Generator, Kitchen, Bridal Room, etc.
+  icon    String?
 }
 
 model VenuePackage {
   id          String   @id @default(uuid())
   venueId     String
   venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  name        String   // Basic, Premium, Luxury
+  name        String   // Basic, Premium, Luxury, Custom
   price       Float
+  guestLimit  Int      @default(200)
   description String?
   includes    String   // JSON list or bullet text of included features
+  isActive    Boolean  @default(true)
 }
 
 model Review {
-  id          String   @id @default(uuid())
-  venueId     String
-  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  userName    String
-  rating      Int      // 1 to 5
-  comment     String
-  isVerified  Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id         String    @id @default(uuid())
+  venueId    String
+  venue      Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  bookingId  String?
+  userName   String
+  rating     Int       // 1 to 5
+  comment    String
+  reply      String?
+  replyDate  DateTime?
+  status     String    @default("APPROVED") // APPROVED, PENDING, HIDDEN, FLAGGED
+  isVerified Boolean   @default(true)
+  createdAt  DateTime  @default(now())
 }
 
 model Favorite {
@@ -165,30 +208,35 @@ model Favorite {
 }
 
 model Enquiry {
-  id              String      @id @default(uuid())
-  enquiryNumber   String      @unique // e.g. ENQ-202609-10245
+  id              String                 @id @default(uuid())
+  enquiryNumber   String                 @unique // e.g. ENQ-202610-10245
   userId          String?
-  user            User?       @relation(fields: [userId], references: [id])
+  user            User?                  @relation(fields: [userId], references: [id])
   venueId         String
-  venue           Venue       @relation(fields: [venueId], references: [id])
+  venue           Venue                  @relation(fields: [venueId], references: [id])
   eventCategoryId String?
-  eventCategory   EventCategory? @relation(fields: [eventCategoryId], references: [id])
-  
+  eventCategory   EventCategory?         @relation(fields: [eventCategoryId], references: [id])
+
   customerName    String
   customerPhone   String
   customerEmail   String
-  eventType       String      // Wedding, Birthday, etc.
+  eventType       String                 // Wedding, Birthday, etc.
   eventDate       DateTime
   guestCount      Int
-  preferredTime   String?     // Morning, Evening, Full Day
-  budget          String?     // Under 50k, 1-2 Lakh, etc.
+  preferredTime   String?                // Morning, Evening, Full Day
+  budget          String?                // Under 50k, 1-2 Lakh, etc.
   message         String?
-  status          String      @default("Submitted") // Submitted, Received, Contacted, Discussion, Quotation, Confirmed
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  status          String                 @default("NEW") // NEW, CONTACTED, INTERESTED, SITE_VISIT, QUOTATION_SENT, NEGOTIATION, ADVANCE_PENDING, BOOKED, COMPLETED, CANCELLED, LOST
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   services        EnquiryService[]
   statusHistory   EnquiryStatusHistory[]
+  activities      EnquiryActivity[]
+  followUps       EnquiryFollowUp[]
+  siteVisits      SiteVisit[]
+  quotations      Quotation[]
+  booking         Booking?
 }
 
 model EnquiryService {
@@ -202,31 +250,271 @@ model EnquiryStatusHistory {
   id        String   @id @default(uuid())
   enquiryId String
   enquiry   Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
-  status    String   // Submitted, Received, Contacted, etc.
+  status    String   // NEW, CONTACTED, etc.
   note      String?
   createdAt DateTime @default(now())
 }
 
-model Vendor {
-  id          String   @id @default(uuid())
+model EnquiryActivity {
+  id        String   @id @default(uuid())
+  enquiryId String
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  type      String   // CALL, WHATSAPP, EMAIL, NOTE, SITE_VISIT, QUOTATION, STATUS_CHANGE
+  note      String
+  userId    String?
+  userName  String?
+  createdAt DateTime @default(now())
+}
+
+model EnquiryFollowUp {
+  id             String    @id @default(uuid())
+  enquiryId      String
+  enquiry        Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  customerId     String?
+  venueId        String
+  venue          Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  customerName   String
+  date           DateTime
+  time           String
+  assignedToId   String?
+  assignedToName String?
+  note           String?
+  status         String    @default("Pending") // Pending, Completed, Missed, Rescheduled
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model SiteVisit {
+  id             String    @id @default(uuid())
+  enquiryId      String
+  enquiry        Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  customerId     String?
+  venueId        String
+  venue          Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  customerName   String
+  date           DateTime
+  time           String
+  assignedToName String?
+  notes          String?
+  status         String    @default("SCHEDULED") // SCHEDULED, COMPLETED, RESCHEDULED, CANCELLED
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Quotation {
+  id              String          @id @default(uuid())
+  quotationNumber String          @unique // e.g. QT-202610-10025
+  enquiryId       String?
+  enquiry         Enquiry?        @relation(fields: [enquiryId], references: [id])
+  customerId      String?
+  venueId         String
+  venue           Venue           @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  customerName    String
+  customerPhone   String?
+  customerEmail   String?
+  eventType       String
+  eventDate       DateTime
+  guestCount      Int
+  subtotal        Float
+  discount        Float           @default(0)
+  tax             Float           @default(0)
+  total           Float
+  status          String          @default("DRAFT") // DRAFT, SENT, VIEWED, NEGOTIATION, ACCEPTED, REJECTED, EXPIRED
+  validUntil      DateTime?
+  terms           String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  items           QuotationItem[]
+  bookings        Booking[]
+}
+
+model QuotationItem {
+  id          String    @id @default(uuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  category    String    // Venue, Package, Catering, Decoration, Photography, DJ, Rooms, Other
   name        String
-  category    String   // Catering, Decoration, Photography, DJ, Makeup, Mehendi, Event Planner, Invitation, Transportation
-  city        String
-  rating      Float    @default(4.8)
-  reviewCount Int      @default(32)
-  startingPrice String // e.g. ₹500 per plate, ₹25,000 per event
-  image       String
-  description String
-  phone       String
-  isVerified  Boolean  @default(true)
-  services    VendorService[]
-  createdAt   DateTime @default(now())
+  quantity    Int       @default(1)
+  unitPrice   Float
+  discount    Float     @default(0)
+  tax         Float     @default(0)
+  total       Float
+}
+
+model Booking {
+  id            String           @id @default(uuid())
+  bookingNumber String           @unique // e.g. BK-202610-10025
+  enquiryId     String?          @unique
+  enquiry       Enquiry?         @relation(fields: [enquiryId], references: [id])
+  customerId    String?
+  venueId       String
+  venue         Venue            @relation(fields: [venueId], references: [id])
+  quotationId   String?
+  quotation     Quotation?       @relation(fields: [quotationId], references: [id])
+  customerName  String
+  customerPhone String
+  customerEmail String
+  eventType     String
+  eventDate     DateTime
+  timeSlot      String           @default("Full Day") // Morning, Evening, Full Day
+  guestCount    Int
+  totalAmount   Float
+  advanceAmount Float            @default(0)
+  paidAmount    Float            @default(0)
+  balanceAmount Float
+  paymentStatus String           @default("PENDING") // PENDING, PARTIAL, PAID
+  status        String           @default("CONFIRMED") // PENDING, CONFIRMED, UPCOMING, IN_PROGRESS, COMPLETED, CANCELLED
+  specialNotes  String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  payments      BookingPayment[]
+  schedules     PaymentSchedule[]
+  eventDetails  Event?
+  commission    Commission?
+}
+
+model BookingPayment {
+  id              String   @id @default(uuid())
+  receiptNumber   String   @unique // e.g. RCP-202610-501
+  bookingId       String
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customerId      String?
+  venueId         String
+  venue           Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  amount          Float
+  paymentMethod   String   // CASH, UPI, BANK_TRANSFER, CHEQUE, CARD, OTHER
+  paymentType     String   @default("ADVANCE") // ADVANCE, SECOND_PAYMENT, FINAL_PAYMENT, OTHER
+  paymentDate     DateTime @default(now())
+  referenceNumber String?
+  notes           String?
+  recordedById    String?
+  recordedByName  String?
+  createdAt       DateTime @default(now())
+}
+
+model PaymentSchedule {
+  id        String    @id @default(uuid())
+  bookingId String
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  milestone String    // Advance, Second Payment, Final Payment
+  amount    Float
+  dueDate   DateTime?
+  status    String    @default("PENDING") // PENDING, PAID, OVERDUE
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Event {
+  id                      String         @id @default(uuid())
+  bookingId               String         @unique
+  booking                 Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  venueId                 String
+  venue                   Venue          @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  eventType               String
+  eventDate               DateTime
+  timeSlot                String?
+  guestCount              Int
+  notes                   String?
+  decorationInstructions  String?
+  cateringInstructions    String?
+  djInstructions          String?
+  photographyInstructions String?
+  guestRequirements       String?
+  specialRequests         String?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  expenses                EventExpense[]
+}
+
+model EventExpense {
+  id             String   @id @default(uuid())
+  eventId        String?
+  event          Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bookingId      String?
+  venueId        String
+  venue          Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  category       String   // Food, Decoration, Staff, Electricity, Cleaning, Vendor, Transport, Other
+  description    String
+  amount         Float
+  date           DateTime @default(now())
+  recordedByName String?
+  createdAt      DateTime @default(now())
+}
+
+model Commission {
+  id               String   @id @default(uuid())
+  bookingId        String   @unique
+  booking          Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  venueId          String
+  venue            Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  bookingAmount    Float
+  commissionType   String   @default("PERCENTAGE") // PERCENTAGE, FIXED
+  commissionRate   Float    @default(5.0)
+  commissionAmount Float
+  ownerAmount      Float
+  status           String   @default("PENDING") // PENDING, SETTLED
+  createdAt        DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // CUSTOMER, VENUE_OWNER, ADMIN
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  userName  String?
+  userRole  String?
+  action    String   // e.g. "APPROVED_VENUE", "CONVERTED_BOOKING", "RECORDED_PAYMENT"
+  entity    String   // e.g. "Venue", "Booking", "Enquiry", "Payment"
+  entityId  String?
+  oldValue  String?
+  newValue  String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model PlatformSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Vendor {
+  id            String          @id @default(uuid())
+  name          String
+  category      String          // Catering, Decoration, Photography, DJ, Makeup, Mehendi, Event Planner, Invitation, Transportation
+  city          String
+  rating        Float           @default(4.8)
+  reviewCount   Int             @default(32)
+  startingPrice String          // e.g. ₹500 per plate, ₹25,000 per event
+  image         String
+  description   String
+  phone         String
+  isVerified    Boolean         @default(true)
+  services      VendorService[]
+  createdAt     DateTime        @default(now())
 }
 
 model VendorService {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   vendorId    String
-  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor      Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   name        String
   description String?
   price       String?
@@ -242,14 +530,14 @@ model ContactMessage {
 }
 
 model BlogPost {
-  id          String   @id @default(uuid())
-  title       String
-  slug        String   @unique
-  excerpt     String
-  content     String
-  image       String
-  author      String   @default("Celibrate Team")
-  category    String
-  readTime    String   @default("5 min read")
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  title     String
+  slug      String   @unique
+  excerpt   String
+  content   String
+  image     String
+  author    String   @default("Celibrate Team")
+  category  String
+  readTime  String   @default("5 min read")
+  createdAt DateTime @default(now())
 }

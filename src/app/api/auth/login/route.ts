@@ -11,13 +11,23 @@ export async function POST(request: Request) {
     const validatedData = LoginSchema.parse(body);
 
     const user = await prisma.user.findUnique({
-      where: { email: validatedData.email },
+      where: { email: validatedData.email.toLowerCase().trim() },
+      include: {
+        ownerProfile: true,
+      },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { success: false, error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } },
         { status: 401 }
+      );
+    }
+
+    if (!user.isActive) {
+      return NextResponse.json(
+        { success: false, error: { code: "ACCOUNT_INACTIVE", message: "Your account has been deactivated. Please contact Celibrate support." } },
+        { status: 403 }
       );
     }
 
@@ -28,7 +38,7 @@ export async function POST(request: Request) {
 
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { success: false, error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } },
         { status: 401 }
       );
     }
@@ -48,21 +58,39 @@ export async function POST(request: Request) {
       path: "/",
     });
 
+    let redirectTo = "/profile";
+    if (user.role === "ADMIN") {
+      redirectTo = "/admin/dashboard";
+    } else if (user.role === "VENUE_OWNER") {
+      redirectTo = "/owner/dashboard";
+    }
+
     return NextResponse.json({
       success: true,
-      user: { id: user.id, name: user.name, email: user.email },
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          city: user.city,
+          phone: user.phone,
+          ownerProfile: user.ownerProfile,
+        },
+        redirectTo,
+      },
       message: "Logged in successfully",
     });
   } catch (error: any) {
     console.error("POST /api/auth/login error:", error);
     if (error.name === "ZodError") {
       return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
+        { success: false, error: { code: "VALIDATION_ERROR", message: "Please check your input", details: error.errors } },
         { status: 400 }
       );
     }
     return NextResponse.json(
-      { error: "Something went wrong during login" },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "Something went wrong during login" } },
       { status: 500 }
     );
   }

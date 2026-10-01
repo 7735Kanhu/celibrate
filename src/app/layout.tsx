@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import MobileBottomNav from "@/components/layout/MobileBottomNav";
-import FloatingWhatsApp from "@/components/ui/FloatingWhatsApp";
+import AppChrome from "@/components/layout/AppChrome";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -20,14 +18,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans min-h-screen flex flex-col bg-lightBg`}>
-        <Header />
-        <main className="flex-1 pb-16 md:pb-0">
+      <body className={`${inter.variable} font-sans min-h-screen flex flex-col bg-lightBg text-gray-900`}>
+        <AppChrome header={<Header />}>
           {children}
-        </main>
-        <Footer />
-        <MobileBottomNav />
-        <FloatingWhatsApp />
+        </AppChrome>
       </body>
     </html>
   );
