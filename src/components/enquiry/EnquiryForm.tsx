@@ -59,11 +59,6 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
         return;
       }
     } else if (step === 2) {
-      if (!formData.venueId) {
-        setError("Please select a venue.");
-        return;
-      }
-    } else if (step === 3) {
       if (!formData.customerName || !formData.customerPhone || !formData.customerEmail) {
         setError("Please fill your contact details.");
         return;
@@ -88,6 +83,7 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          venueId: formData.venueId || (venues.length > 0 ? venues[0].id : ""),
           guestCount: parseInt(formData.guestCount, 10)
         }),
       });
@@ -95,9 +91,12 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
       const data = await response.json();
       
       if (response.ok) {
-        router.push(`/enquiry/success?id=${data.enquiryNumber}`);
+        const enqNum = data.enquiryNumber || data.data?.enquiryNumber || "ENQ-PENDING";
+        const emailParam = encodeURIComponent(formData.customerEmail.trim());
+        const phoneParam = encodeURIComponent(formData.customerPhone.trim());
+        router.push(`/enquiry/success?id=${enqNum}&email=${emailParam}&phone=${phoneParam}`);
       } else {
-        setError(data.error || "Failed to submit enquiry");
+        setError(data.error?.message || data.message || data.error || "Failed to submit enquiry");
       }
     } catch (err) {
       setError("An unexpected error occurred.");
@@ -111,13 +110,13 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
       
       {/* Progress Bar */}
       <div className="bg-gray-50 flex border-b border-gray-100">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3].map((i) => (
           <div key={i} className={`flex-1 py-3 px-2 text-center text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors ${
             step === i ? "border-brand-500 text-brand-500 bg-white" : 
             step > i ? "border-brand-300 text-gray-500 bg-white" : "border-transparent text-gray-400"
           }`}>
             <span className="hidden sm:inline">
-              {i === 1 ? "Event" : i === 2 ? "Requirements" : i === 3 ? "Contact" : "Review"}
+              {i === 1 ? "Event" : i === 2 ? "Contact" : "Review"}
             </span>
             <span className="sm:hidden">Step {i}</span>
           </div>
@@ -183,7 +182,7 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
         )}
 
         {/* Step 2: Requirements & Venue */}
-        {step === 2 && (
+        {/* {step === 2 && (
           <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Your Requirements</h2>
             
@@ -235,10 +234,10 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
-        {/* Step 3: Contact */}
-        {step === 3 && (
+        {/* Step 2: Contact */}
+        {step === 2 && (
           <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Contact Details</h2>
             
@@ -268,8 +267,8 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
           </div>
         )}
 
-        {/* Step 4: Review & Submit */}
-        {step === 4 && (
+        {/* Step 3: Review & Submit */}
+        {step === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -314,7 +313,7 @@ export default function EnquiryForm({ venues, eventCategories, initialVenueId, s
           </button>
         ) : <div></div>}
 
-        {step < 4 ? (
+        {step < 3 ? (
           <button onClick={nextStep} type="button" className="btn-primary px-8 py-2.5">
             Next Step <ChevronRight className="w-5 h-5 ml-1" />
           </button>

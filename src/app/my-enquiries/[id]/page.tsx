@@ -13,19 +13,10 @@ export const metadata: Metadata = {
 export default async function EnquiryDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const user = await getCurrentUser();
-  let userId = user?.id;
-
-  if (!userId) {
-    const demoUser = await prisma.user.findUnique({
-      where: { email: "customer@celibrate.demo" },
-    });
-    userId = demoUser?.id;
-  }
 
   const enquiry = await prisma.enquiry.findFirst({
     where: { 
-      id: params.id,
-      userId: userId // Ensure user can only see their own enquiry
+      OR: [{ id: params.id }, { enquiryNumber: params.id }]
     },
     include: {
       venue: {
@@ -44,6 +35,37 @@ export default async function EnquiryDetailPage(props: { params: Promise<{ id: s
   });
 
   if (!enquiry) notFound();
+
+  // Validate ownership
+  let isAuthorized = false;
+  if (user) {
+    if (user.role === "ADMIN") {
+      isAuthorized = true;
+    } else if (
+      enquiry.userId === user.id ||
+      (user.email && enquiry.customerEmail?.toLowerCase() === user.email.toLowerCase()) ||
+      (user.phone && enquiry.customerPhone === user.phone)
+    ) {
+      isAuthorized = true;
+      // Auto-relink enquiry to user if userId was mismatched
+      if (enquiry.userId !== user.id) {
+        prisma.enquiry.update({
+          where: { id: enquiry.id },
+          data: { userId: user.id },
+        }).catch(() => {});
+      }
+    }
+  } else {
+    // Unauthenticated demo fallback check
+    const demoUser = await prisma.user.findUnique({
+      where: { email: "customer@celibrate.demo" },
+    });
+    if (demoUser && (enquiry.userId === demoUser.id || enquiry.customerEmail === demoUser.email)) {
+      isAuthorized = true;
+    }
+  }
+
+  if (!isAuthorized) notFound();
 
   const getStatusColor = (status: string) => {
     const s = status?.toUpperCase();

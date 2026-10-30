@@ -106,7 +106,7 @@ export default function OwnerDashboardPage() {
             <MessageSquareText className="w-4 h-4 text-rose-500" />
           </div>
           <div className="text-2xl font-black text-rose-600">{stats.newEnquiries}</div>
-          <div className="text-[11px] text-gray-400 mt-1">Leads awaiting contact</div>
+          <div className="text-[11px] text-gray-400 mt-1">Managed by Admin</div>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-2xs hover:shadow-xs transition-shadow">
@@ -252,14 +252,19 @@ export default function OwnerDashboardPage() {
       <div className="bg-white rounded-3xl border border-gray-100 shadow-card p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
           <div>
-            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-              <MessageSquareText className="w-4 h-4 text-rose-500" />
-              Latest Inbound Customer Leads
-            </h2>
-            <p className="text-[11px] text-gray-500">Customers seeking availability for your venue</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <MessageSquareText className="w-4 h-4 text-rose-500" />
+                Latest Inbound Customer Leads
+              </h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                Managed by Admin
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500">Inbound customer enquiries managed directly by Celibrate Admin</p>
           </div>
           <Link href="/owner/enquiries" className="text-xs font-semibold text-brand-600 hover:underline">
-            Manage Pipeline →
+            View All Enquiries →
           </Link>
         </div>
 

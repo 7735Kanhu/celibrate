@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Heart, User, Search, Shield, Building2 } from "lucide-react";
+import { Heart, User, Search, Shield, Building2, MessageSquareText } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function Header() {
@@ -39,6 +39,12 @@ export default async function Header() {
             <Heart className="w-5 h-5" />
             <span className="text-sm font-medium">Favorites</span>
           </Link>
+          {user?.role === "CUSTOMER" && (
+            <Link href="/my-enquiries" className="p-2 text-gray-600 hover:text-brand-500 transition-colors rounded-full hover:bg-gray-50 flex items-center gap-1.5" title="My Enquiries">
+              <MessageSquareText className="w-5 h-5 text-brand-600" />
+              <span className="text-sm font-medium text-brand-600">My Enquiries</span>
+            </Link>
+          )}
 
           {user ? (
             <div className="flex items-center gap-2">

@@ -33,6 +33,26 @@ export async function POST(request: Request) {
       },
     });
 
+    // Link any previous enquiries matching email or phone
+    try {
+      const linkConditions: any[] = [
+        { customerEmail: user.email },
+        { customerEmail: user.email.toLowerCase() },
+      ];
+      if (user.phone) {
+        linkConditions.push({ customerPhone: user.phone });
+      }
+      await prisma.enquiry.updateMany({
+        where: {
+          OR: linkConditions,
+          userId: { not: user.id },
+        },
+        data: { userId: user.id },
+      });
+    } catch (linkErr) {
+      console.warn("Failed to relink enquiries on registration:", linkErr);
+    }
+
     const token = signToken({
       userId: user.id,
       email: user.email,

@@ -14,6 +14,7 @@ import {
   XCircle,
   Eye,
   X,
+  MessageCircle,
 } from "lucide-react";
 
 export default function AdminCustomersPage() {
@@ -133,6 +134,7 @@ export default function AdminCustomersPage() {
                   <th className="py-3.5 px-4">Bookings</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4">Joined Date</th>
+                  <th className="py-3.5 px-4 text-center">Quick Contact</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -175,6 +177,33 @@ export default function AdminCustomersPage() {
 
                     <td className="py-4 px-4 text-gray-500">
                       {new Date(c.createdAt).toLocaleDateString()}
+                    </td>
+
+                    <td className="py-4 px-4 text-center">
+                      {c.phone ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <a
+                            href={`tel:${c.phone}`}
+                            className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors"
+                            title="Call Customer"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                          </a>
+                          <a
+                            href={`https://wa.me/${c.phone.replace(/[^0-9]/g, "").startsWith("91") ? c.phone.replace(/[^0-9]/g, "") : `91${c.phone.replace(/[^0-9]/g, "")}`}?text=${encodeURIComponent(
+                              `Hello ${c.name}, this is Celibrate reaching out regarding your venue enquiries and bookings.`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors"
+                            title="WhatsApp Customer"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
 
                     <td className="py-4 px-4 text-right">

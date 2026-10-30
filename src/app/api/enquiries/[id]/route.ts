@@ -46,11 +46,26 @@ export async function GET(
 
     // Role Permission Check (Requirement 55)
     if (currentUser) {
-      if (currentUser.role === "CUSTOMER" && enquiry.userId && enquiry.userId !== currentUser.id) {
-        return NextResponse.json(
-          { success: false, error: { code: "FORBIDDEN", message: "Access denied" } },
-          { status: 403 }
-        );
+      if (currentUser.role === "CUSTOMER") {
+        const isMatch =
+          enquiry.userId === currentUser.id ||
+          (currentUser.email && enquiry.customerEmail?.toLowerCase() === currentUser.email.toLowerCase()) ||
+          (currentUser.phone && enquiry.customerPhone === currentUser.phone);
+
+        if (!isMatch) {
+          return NextResponse.json(
+            { success: false, error: { code: "FORBIDDEN", message: "Access denied" } },
+            { status: 403 }
+          );
+        }
+
+        // Auto-relink enquiry to customer account if userId was mismatched
+        if (enquiry.userId !== currentUser.id) {
+          prisma.enquiry.update({
+            where: { id: enquiry.id },
+            data: { userId: currentUser.id },
+          }).catch(() => {});
+        }
       }
       if (currentUser.role === "VENUE_OWNER" && enquiry.venue.ownerId !== currentUser.id) {
         return NextResponse.json(
@@ -78,9 +93,9 @@ export async function PATCH(
     const { id } = await params;
     const currentUser = await getCurrentUser();
 
-    if (!currentUser || (currentUser.role !== "ADMIN" && currentUser.role !== "VENUE_OWNER")) {
+    if (!currentUser || currentUser.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: { code: "FORBIDDEN", message: "Only Admin and Venue Owners can update enquiry status" } },
+        { success: false, error: { code: "FORBIDDEN", message: "Venue enquiries are managed by Admin only" } },
         { status: 403 }
       );
     }
@@ -94,13 +109,6 @@ export async function PATCH(
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "Enquiry not found" } },
         { status: 404 }
-      );
-    }
-
-    if (currentUser.role === "VENUE_OWNER" && enquiry.venue.ownerId !== currentUser.id) {
-      return NextResponse.json(
-        { success: false, error: { code: "FORBIDDEN", message: "Unauthorized access to this venue enquiry" } },
-        { status: 403 }
       );
     }
 

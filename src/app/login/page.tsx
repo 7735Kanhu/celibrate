@@ -10,10 +10,11 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("from") || searchParams.get("redirect");
 
+  const emailParam = searchParams.get("email") || "";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    email: "",
+    email: emailParam,
     password: "",
   });
 
@@ -79,6 +80,15 @@ function LoginContent() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-white py-8 px-6 shadow-card sm:rounded-3xl sm:px-10 border border-gray-100">
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {emailParam && !error && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-start gap-2.5">
+                <Check className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <p>
+                  <strong>Enquiry Submitted!</strong> Your account is ready. Sign in with your registered phone number as the password.
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5">
                 <AlertCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />

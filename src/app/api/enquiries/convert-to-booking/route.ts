@@ -6,11 +6,11 @@ import { convertOrDirectBooking } from "@/lib/bookingService";
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser || (currentUser.role !== "ADMIN" && currentUser.role !== "VENUE_OWNER")) {
+    if (!currentUser || currentUser.role !== "ADMIN") {
       return NextResponse.json(
         {
           success: false,
-          error: { code: "FORBIDDEN", message: "Only Admin or authorized Venue Owners can convert enquiries into bookings" },
+          error: { code: "FORBIDDEN", message: "Only Admin can convert enquiries into bookings" },
         },
         { status: 403 }
       );
@@ -44,13 +44,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "Enquiry not found" } },
         { status: 404 }
-      );
-    }
-
-    if (currentUser.role === "VENUE_OWNER" && enquiry.venue.ownerId !== currentUser.id) {
-      return NextResponse.json(
-        { success: false, error: { code: "FORBIDDEN", message: "You can only convert enquiries for your own venue" } },
-        { status: 403 }
       );
     }
 

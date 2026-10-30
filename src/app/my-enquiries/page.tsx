@@ -12,24 +12,68 @@ export const metadata: Metadata = {
 
 export default async function MyEnquiriesPage() {
   const user = await getCurrentUser();
-  let userId = user?.id;
 
-  // Fallback to demo user if not logged in
-  if (!userId) {
+  // If customer is logged in, link any matching enquiries by email or phone to this user
+  if (user?.id) {
+    try {
+      const linkConditions: any[] = [];
+      if (user.email) {
+        linkConditions.push({ customerEmail: user.email.trim() });
+        linkConditions.push({ customerEmail: user.email.trim().toLowerCase() });
+      }
+      if (user.phone) {
+        linkConditions.push({ customerPhone: user.phone.trim() });
+      }
+      if (linkConditions.length > 0) {
+        await prisma.enquiry.updateMany({
+          where: {
+            OR: linkConditions,
+            userId: { not: user.id },
+          },
+          data: { userId: user.id },
+        });
+      }
+    } catch (err) {
+      console.warn("Auto-linking customer enquiries warning:", err);
+    }
+  }
+
+  let where: any;
+  if (user?.id) {
+    const userConditions: any[] = [{ userId: user.id }];
+    if (user.email) {
+      userConditions.push({ customerEmail: user.email.trim() });
+      userConditions.push({ customerEmail: user.email.trim().toLowerCase() });
+    }
+    if (user.phone) {
+      userConditions.push({ customerPhone: user.phone.trim() });
+    }
+    where = { OR: userConditions };
+  } else {
+    // Fallback to demo user if not logged in
     const demoUser = await prisma.user.findUnique({
       where: { email: "customer@celibrate.demo" },
     });
-    userId = demoUser?.id;
+    if (demoUser) {
+      where = {
+        OR: [
+          { userId: demoUser.id },
+          { customerEmail: demoUser.email },
+        ],
+      };
+    } else {
+      where = { userId: "none" };
+    }
   }
 
   const enquiries = await prisma.enquiry.findMany({
-    where: { userId },
+    where,
     orderBy: { createdAt: "desc" },
     include: {
       venue: {
         include: {
           city: true,
-          images: { where: { isPrimary: true } },
+          images: true,
         },
       },
     },
@@ -79,8 +123,12 @@ export default async function MyEnquiriesPage() {
                   {/* Venue Image */}
                   <div className="w-full md:w-48 h-32 md:h-auto rounded-xl overflow-hidden relative shrink-0 bg-gray-100">
                     <Image 
-                      src={enquiry.venue.images[0]?.url || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800"} 
-                      alt={enquiry.venue.name}
+                      src={
+                        enquiry.venue?.images?.find((img) => img.isPrimary)?.url ||
+                        enquiry.venue?.images?.[0]?.url ||
+                        "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800"
+                      } 
+                      alt={enquiry.venue?.name || "Venue"}
                       fill
                       className="object-cover"
                     />

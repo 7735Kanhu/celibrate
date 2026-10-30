@@ -10,12 +10,51 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = LoginSchema.parse(body);
 
-    const user = await prisma.user.findUnique({
-      where: { email: validatedData.email.toLowerCase().trim() },
+    const normalizedEmail = validatedData.email.toLowerCase().trim();
+
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
       include: {
         ownerProfile: true,
       },
     });
+
+    // Fallback: If user is not yet in Prisma, check MongoDB
+    if (!user) {
+      try {
+        const { connectMongo } = await import("@/lib/mongodb");
+        const { MongoUser } = await import("@/models/MongoUser");
+        await connectMongo();
+        const mongoUser = await MongoUser.findOne({ email: normalizedEmail });
+        
+        if (mongoUser) {
+          // Sync user to Prisma
+          user = await prisma.user.upsert({
+            where: { email: normalizedEmail },
+            update: {
+              password: mongoUser.password,
+              phone: mongoUser.phone,
+              name: mongoUser.name,
+              role: mongoUser.role,
+              isActive: mongoUser.isActive,
+            },
+            create: {
+              email: normalizedEmail,
+              password: mongoUser.password,
+              name: mongoUser.name,
+              phone: mongoUser.phone,
+              role: mongoUser.role,
+              isActive: mongoUser.isActive,
+            },
+            include: {
+              ownerProfile: true,
+            },
+          });
+        }
+      } catch (fallbackErr: any) {
+        console.warn("[Auth Login] Mongo fallback warning:", fallbackErr.message);
+      }
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -57,6 +96,28 @@ export async function POST(request: Request) {
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: "/",
     });
+
+    // If customer, link any enquiries submitted with their email or phone
+    if (user.role === "CUSTOMER") {
+      try {
+        const linkConditions: any[] = [
+          { customerEmail: user.email },
+          { customerEmail: user.email.toLowerCase() },
+        ];
+        if (user.phone) {
+          linkConditions.push({ customerPhone: user.phone });
+        }
+        await prisma.enquiry.updateMany({
+          where: {
+            OR: linkConditions,
+            userId: { not: user.id },
+          },
+          data: { userId: user.id },
+        });
+      } catch (linkErr) {
+        console.warn("Failed to relink enquiries on login:", linkErr);
+      }
+    }
 
     let redirectTo = "/profile";
     if (user.role === "ADMIN") {
