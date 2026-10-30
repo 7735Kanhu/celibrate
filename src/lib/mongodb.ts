@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/celibrate";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://kanhu2551996_db_user:LthxR8gtqRyudVOq@cluster0.vrnc4eo.mongodb.net/";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
