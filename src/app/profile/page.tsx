@@ -14,64 +14,61 @@ export const metadata: Metadata = {
 export default async function ProfilePage() {
   const user = await getCurrentUser();
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-16 px-4 sm:px-6 lg:px-8 items-center text-center">
+        <div className="w-16 h-16 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-600 mb-4">
+          <User className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Please log in to view your profile</h2>
+        <p className="text-gray-500 text-sm max-w-md mb-6">
+          Access your personal details, celebration history, active venue enquiries, and saved favorites.
+        </p>
+        <Link href="/login" className="btn-primary py-2.5 px-6 text-sm">
+          Sign In / Register
+        </Link>
+      </div>
+    );
+  }
+
+  const displayUser = user;
+
   // If customer is logged in, link any matching enquiries by email or phone to this user
-  if (user?.id) {
-    try {
-      const linkConditions: any[] = [];
-      if (user.email) {
-        linkConditions.push({ customerEmail: user.email.trim() });
-        linkConditions.push({ customerEmail: user.email.trim().toLowerCase() });
-      }
-      if (user.phone) {
-        linkConditions.push({ customerPhone: user.phone.trim() });
-      }
-      if (linkConditions.length > 0) {
-        await prisma.enquiry.updateMany({
-          where: {
-            OR: linkConditions,
-            userId: { not: user.id },
-          },
-          data: { userId: user.id },
-        });
-      }
-    } catch (err) {
-      console.warn("Auto-linking customer enquiries warning in profile:", err);
+  try {
+    const linkConditions: any[] = [];
+    if (user.email) {
+      linkConditions.push({ customerEmail: user.email.trim() });
+      linkConditions.push({ customerEmail: user.email.trim().toLowerCase() });
     }
+    if (user.phone) {
+      linkConditions.push({ customerPhone: user.phone.trim() });
+    }
+    if (linkConditions.length > 0) {
+      await prisma.enquiry.updateMany({
+        where: {
+          OR: linkConditions,
+          userId: { not: user.id },
+        },
+        data: { userId: user.id },
+      });
+    }
+  } catch (err) {
+    console.warn("Auto-linking customer enquiries warning in profile:", err);
   }
 
-  // Fallback to demo user for demonstration if not logged in
-  let displayUser = user;
-  if (!displayUser) {
-    const demoUser = await prisma.user.findUnique({
-      where: { email: "customer@celibrate.demo" },
-    });
-    if (demoUser) {
-      displayUser = {
-        id: demoUser.id,
-        email: demoUser.email,
-        name: demoUser.name,
-        phone: demoUser.phone,
-        city: demoUser.city,
-        role: demoUser.role,
-        createdAt: demoUser.createdAt,
-      } as any;
-    }
+  const enquiryConditions: any[] = [{ userId: user.id }];
+  if (user.email) {
+    enquiryConditions.push({ customerEmail: user.email.trim() });
+    enquiryConditions.push({ customerEmail: user.email.trim().toLowerCase() });
   }
-
-  const enquiryConditions: any[] = [];
-  if (displayUser?.id) enquiryConditions.push({ userId: displayUser.id });
-  if (displayUser?.email) {
-    enquiryConditions.push({ customerEmail: displayUser.email.trim() });
-    enquiryConditions.push({ customerEmail: displayUser.email.trim().toLowerCase() });
+  if (user.phone) {
+    enquiryConditions.push({ customerPhone: user.phone.trim() });
   }
-  if (displayUser?.phone) {
-    enquiryConditions.push({ customerPhone: displayUser.phone.trim() });
-  }
-  const enquiryWhere = enquiryConditions.length > 0 ? { OR: enquiryConditions } : { userId: "none" };
+  const enquiryWhere = { OR: enquiryConditions };
 
   const [enquiryCount, favoriteCount, recentEnquiries] = await Promise.all([
     prisma.enquiry.count({ where: enquiryWhere }),
-    displayUser?.id ? prisma.favorite.count({ where: { userId: displayUser.id } }) : 0,
+    prisma.favorite.count({ where: { userId: user.id } }),
     prisma.enquiry.findMany({
       where: enquiryWhere,
       orderBy: { createdAt: "desc" },
@@ -86,15 +83,6 @@ export default async function ProfilePage() {
       },
     }),
   ]);
-
-  if (!displayUser) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 items-center">
-        <h2 className="text-2xl font-bold mb-4">Please log in to view your profile</h2>
-        <Link href="/login" className="btn-primary">Sign In</Link>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-gray-50 min-h-screen py-8 md:py-12">

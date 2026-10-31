@@ -46,7 +46,7 @@ export default function PrivacyPage() {
 
           <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">5. Contact Us</h2>
           <p>
-            If you have any questions about this Privacy Policy, please contact us at privacy@celibrate.demo.
+            If you have any questions about this Privacy Policy, please contact us at privacy@celibrate.com.
           </p>
         </div>
       </div>

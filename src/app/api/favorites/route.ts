@@ -5,18 +5,10 @@ import { getCurrentUser } from "@/lib/auth";
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    let userId = user?.id;
-
-    if (!userId) {
-      const demoUser = await prisma.user.findUnique({
-        where: { email: "customer@celibrate.demo" },
-      });
-      userId = demoUser?.id;
-    }
-
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ favorites: [] });
     }
+    const userId = user.id;
 
     const favorites = await prisma.favorite.findMany({
       where: { userId },
@@ -47,19 +39,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Venue ID is required" }, { status: 400 });
     }
 
-    let user = await getCurrentUser();
-    let userId = user?.id;
-
-    if (!userId) {
-      const demoUser = await prisma.user.findUnique({
-        where: { email: "customer@celibrate.demo" },
-      });
-      userId = demoUser?.id;
-    }
-
-    if (!userId) {
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json({ error: "Please log in to save favorites" }, { status: 401 });
     }
+    const userId = user.id;
 
     const existing = await prisma.favorite.findUnique({
       where: {

@@ -25,7 +25,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-brand-500 shrink-0" />
-                <span>hello@celibrate.demo</span>
+                <span>hello@celibrate.com</span>
               </div>
             </div>
           </div>

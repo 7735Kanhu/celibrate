@@ -55,14 +55,6 @@ export default async function EnquiryDetailPage(props: { params: Promise<{ id: s
         }).catch(() => {});
       }
     }
-  } else {
-    // Unauthenticated demo fallback check
-    const demoUser = await prisma.user.findUnique({
-      where: { email: "customer@celibrate.demo" },
-    });
-    if (demoUser && (enquiry.userId === demoUser.id || enquiry.customerEmail === demoUser.email)) {
-      isAuthorized = true;
-    }
   }
 
   if (!isAuthorized) notFound();
@@ -240,8 +232,8 @@ export default async function EnquiryDetailPage(props: { params: Promise<{ id: s
                 <a href="tel:+919876543210" className="flex items-center gap-2 text-sm font-semibold text-brand-700 bg-white p-2 rounded-lg border border-brand-200">
                   <Phone className="w-4 h-4 text-brand-500"/> +91 98765 43210
                 </a>
-                <a href="mailto:support@celibrate.demo" className="flex items-center gap-2 text-sm font-semibold text-brand-700 bg-white p-2 rounded-lg border border-brand-200">
-                  <Mail className="w-4 h-4 text-brand-500"/> support@celibrate.demo
+                <a href="mailto:support@celibrate.com" className="flex items-center gap-2 text-sm font-semibold text-brand-700 bg-white p-2 rounded-lg border border-brand-200">
+                  <Mail className="w-4 h-4 text-brand-500"/> support@celibrate.com
                 </a>
               </div>
             </div>

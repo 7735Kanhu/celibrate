@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, AlertCircle, ArrowRight, User, Building2, Shield, Check } from "lucide-react";
+import { Mail, Lock, AlertCircle, ArrowRight, Shield, Check } from "lucide-react";
 
 function LoginContent() {
   const router = useRouter();
@@ -20,14 +20,6 @@ function LoginContent() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleFillDemo = (type: "customer" | "owner") => {
-    if (type === "customer") {
-      setFormData({ email: "customer@celibrate.demo", password: "Customer@123" });
-    } else {
-      setFormData({ email: "owner@celibrate.demo", password: "Owner@123" });
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,38 +140,6 @@ function LoginContent() {
               </button>
             </div>
           </form>
-
-          {/* Quick Demo Access Helpers */}
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 text-center">
-              Quick One-Click Demo Access
-            </p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleFillDemo("customer")}
-                className="p-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-300 rounded-xl text-left transition-all group"
-              >
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 group-hover:text-brand-600">
-                  <User className="w-3.5 h-3.5 text-brand-500" />
-                  Demo Customer
-                </div>
-                <div className="text-[11px] text-gray-500 mt-1 font-mono">customer@...</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFillDemo("owner")}
-                className="p-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-300 rounded-xl text-left transition-all group"
-              >
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 group-hover:text-brand-600">
-                  <Building2 className="w-3.5 h-3.5 text-brand-500" />
-                  Venue Owner
-                </div>
-                <div className="text-[11px] text-gray-500 mt-1 font-mono">owner@...</div>
-              </button>
-            </div>
-          </div>
 
           <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-2 text-center text-xs">
             <Link

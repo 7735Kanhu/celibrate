@@ -277,18 +277,7 @@ export async function GET(request: Request) {
 
     // Role-based data scoping (Requirement 55)
     if (!currentUser) {
-      // If unauthenticated, fallback to demo customer enquiry
-      const demoUser = await prisma.user.findUnique({ where: { email: "customer@celibrate.demo" } });
-      if (demoUser) {
-        andConditions.push({
-          OR: [
-            { userId: demoUser.id },
-            { customerEmail: demoUser.email },
-          ],
-        });
-      } else {
-        return NextResponse.json({ success: true, data: { enquiries: [] } });
-      }
+      return NextResponse.json({ success: true, data: { enquiries: [] } });
     } else if (currentUser.role === "CUSTOMER") {
       // Customer sees ONLY their own enquiries (by userId, email, or phone)
       const userConditions: any[] = [{ userId: currentUser.id }];

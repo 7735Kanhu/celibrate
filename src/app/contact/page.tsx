@@ -81,8 +81,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
-                    <p className="text-gray-600 mb-2">support@celibrate.demo</p>
-                    <a href="mailto:support@celibrate.demo" className="text-sm font-medium text-brand-600 hover:text-brand-700">Drop us a line</a>
+                    <p className="text-gray-600 mb-2">support@celibrate.com</p>
+                    <a href="mailto:support@celibrate.com" className="text-sm font-medium text-brand-600 hover:text-brand-700">Drop us a line</a>
                   </div>
                 </div>
 

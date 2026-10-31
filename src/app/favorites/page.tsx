@@ -11,15 +11,7 @@ export const metadata: Metadata = {
 
 export default async function FavoritesPage() {
   const user = await getCurrentUser();
-  let userId = user?.id;
-
-  // Fallback to demo user if not logged in
-  if (!userId) {
-    const demoUser = await prisma.user.findUnique({
-      where: { email: "customer@celibrate.demo" },
-    });
-    userId = demoUser?.id;
-  }
+  const userId = user?.id;
 
   let favorites: any[] = [];
   if (userId) {
@@ -46,7 +38,20 @@ export default async function FavoritesPage() {
           <p className="text-gray-600">Venues you've saved for your upcoming celebrations.</p>
         </div>
 
-        {favorites.length === 0 ? (
+        {!userId ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
+            <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Heart className="w-10 h-10 text-brand-300" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Sign in to view your favorites</h2>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              Please log in to save venues, compare pricing, and manage your wishlist.
+            </p>
+            <Link href="/login" className="btn-primary inline-flex items-center gap-2">
+              Sign In / Register
+            </Link>
+          </div>
+        ) : favorites.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
             <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <Heart className="w-10 h-10 text-brand-300" />

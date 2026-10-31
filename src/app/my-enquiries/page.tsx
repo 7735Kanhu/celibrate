@@ -13,58 +13,62 @@ export const metadata: Metadata = {
 export default async function MyEnquiriesPage() {
   const user = await getCurrentUser();
 
-  // If customer is logged in, link any matching enquiries by email or phone to this user
-  if (user?.id) {
-    try {
-      const linkConditions: any[] = [];
-      if (user.email) {
-        linkConditions.push({ customerEmail: user.email.trim() });
-        linkConditions.push({ customerEmail: user.email.trim().toLowerCase() });
-      }
-      if (user.phone) {
-        linkConditions.push({ customerPhone: user.phone.trim() });
-      }
-      if (linkConditions.length > 0) {
-        await prisma.enquiry.updateMany({
-          where: {
-            OR: linkConditions,
-            userId: { not: user.id },
-          },
-          data: { userId: user.id },
-        });
-      }
-    } catch (err) {
-      console.warn("Auto-linking customer enquiries warning:", err);
-    }
+  if (!user) {
+    return (
+      <div className="bg-gray-50 min-h-screen py-16 px-4">
+        <div className="container mx-auto max-w-lg text-center bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-600 mx-auto mb-4">
+            <FileText className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign in to view your enquiries</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            Log in with your email or phone number to track active venue quotations, site visits, and booking confirmations.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/login" className="btn-primary py-2.5 px-6 text-sm">
+              Sign In
+            </Link>
+            <Link href="/venues" className="btn-secondary py-2.5 px-6 text-sm">
+              Explore Venues
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  let where: any;
-  if (user?.id) {
-    const userConditions: any[] = [{ userId: user.id }];
+  // If customer is logged in, link any matching enquiries by email or phone to this user
+  try {
+    const linkConditions: any[] = [];
     if (user.email) {
-      userConditions.push({ customerEmail: user.email.trim() });
-      userConditions.push({ customerEmail: user.email.trim().toLowerCase() });
+      linkConditions.push({ customerEmail: user.email.trim() });
+      linkConditions.push({ customerEmail: user.email.trim().toLowerCase() });
     }
     if (user.phone) {
-      userConditions.push({ customerPhone: user.phone.trim() });
+      linkConditions.push({ customerPhone: user.phone.trim() });
     }
-    where = { OR: userConditions };
-  } else {
-    // Fallback to demo user if not logged in
-    const demoUser = await prisma.user.findUnique({
-      where: { email: "customer@celibrate.demo" },
-    });
-    if (demoUser) {
-      where = {
-        OR: [
-          { userId: demoUser.id },
-          { customerEmail: demoUser.email },
-        ],
-      };
-    } else {
-      where = { userId: "none" };
+    if (linkConditions.length > 0) {
+      await prisma.enquiry.updateMany({
+        where: {
+          OR: linkConditions,
+          userId: { not: user.id },
+        },
+        data: { userId: user.id },
+      });
     }
+  } catch (err) {
+    console.warn("Auto-linking customer enquiries warning:", err);
   }
+
+  const userConditions: any[] = [{ userId: user.id }];
+  if (user.email) {
+    userConditions.push({ customerEmail: user.email.trim() });
+    userConditions.push({ customerEmail: user.email.trim().toLowerCase() });
+  }
+  if (user.phone) {
+    userConditions.push({ customerPhone: user.phone.trim() });
+  }
+  const where = { OR: userConditions };
 
   const enquiries = await prisma.enquiry.findMany({
     where,
