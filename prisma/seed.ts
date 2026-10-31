@@ -3,10 +3,59 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const settingsData = [
+  { key: "platform_name", value: "Celibrate", description: "Platform display name" },
+  { key: "tagline", value: "Find the Perfect Place for Every Celebration", description: "Platform tagline" },
+  { key: "contact_phone", value: "+91 98765 43210", description: "Customer care support phone" },
+  { key: "contact_email", value: "support@celibrate.in", description: "Customer care support email" },
+  { key: "whatsapp_number", value: "919876543210", description: "Official WhatsApp support number" },
+  { key: "commission_type", value: "PERCENTAGE", description: "Commission calculation type (PERCENTAGE / FIXED)" },
+  { key: "commission_rate", value: "5.0", description: "Platform commission rate in % or fixed amount" },
+  { key: "currency", value: "INR", description: "Default currency code" },
+  { key: "currency_symbol", value: "₹", description: "Default currency symbol" },
+  { key: "tax_rate", value: "18.0", description: "Default GST/Tax percentage" },
+  { key: "allow_instant_booking", value: "false", description: "Whether customers can book directly without enquiry (enforce false)" },
+];
+
 async function main() {
   console.log("Seeding Celibrate multi-role platform database...");
 
-  // Clean existing tables in proper order
+  // Guard: If database is already seeded, preserve all data (do NOT delete customers or enquiries)
+  const existingVenuesCount = await prisma.venue.count();
+  if (existingVenuesCount > 0) {
+    console.log(`Database already contains ${existingVenuesCount} venues. Preserving all real data, users, and enquiries...`);
+    
+    // Ensure platform settings exist
+    for (const s of settingsData) {
+      await prisma.platformSetting.upsert({
+        where: { key: s.key },
+        update: {},
+        create: s,
+      });
+    }
+
+    // Ensure admin user exists
+    const adminPasswordHash = await bcrypt.hash("Admin@123", 10);
+    await prisma.user.upsert({
+      where: { email: "admin@celibrate.demo" },
+      update: {},
+      create: {
+        email: "admin@celibrate.demo",
+        password: adminPasswordHash,
+        name: "Celibrate Platform Admin",
+        phone: "+91 98765 00001",
+        city: "Bhubaneswar",
+        role: "ADMIN",
+        isActive: true,
+        isVerified: true,
+      },
+    });
+
+    console.log("Database already initialized. Real data preserved.");
+    return;
+  }
+
+  // Clean existing tables in proper order (only for brand new fresh initialization)
   await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.commission.deleteMany();
@@ -42,23 +91,9 @@ async function main() {
   await prisma.platformSetting.deleteMany();
   await prisma.user.deleteMany();
 
-  console.log("Cleaned existing data.");
+  console.log("Cleaned fresh initialization data.");
 
   // 1. Platform Settings
-  const settingsData = [
-    { key: "platform_name", value: "Celibrate", description: "Platform display name" },
-    { key: "tagline", value: "Find the Perfect Place for Every Celebration", description: "Platform tagline" },
-    { key: "contact_phone", value: "+91 98765 43210", description: "Customer care support phone" },
-    { key: "contact_email", value: "support@celibrate.in", description: "Customer care support email" },
-    { key: "whatsapp_number", value: "919876543210", description: "Official WhatsApp support number" },
-    { key: "commission_type", value: "PERCENTAGE", description: "Commission calculation type (PERCENTAGE / FIXED)" },
-    { key: "commission_rate", value: "5.0", description: "Platform commission rate in % or fixed amount" },
-    { key: "currency", value: "INR", description: "Default currency code" },
-    { key: "currency_symbol", value: "₹", description: "Default currency symbol" },
-    { key: "tax_rate", value: "18.0", description: "Default GST/Tax percentage" },
-    { key: "allow_instant_booking", value: "false", description: "Whether customers can book directly without enquiry (enforce false)" },
-  ];
-
   for (const s of settingsData) {
     await prisma.platformSetting.create({ data: s });
   }

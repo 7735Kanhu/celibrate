@@ -145,6 +145,24 @@ export async function POST(request: Request) {
       return { user, profile, venue };
     });
 
+    // Also persist venue owner user to MongoDB
+    try {
+      const { syncUserToMongo } = await import("@/lib/mongodb");
+      await syncUserToMongo({
+        name: data.ownerName,
+        email: data.email,
+        password: hashedPassword,
+        phone: data.phone,
+        city: data.city,
+        role: "VENUE_OWNER",
+        prismaId: result.user.id,
+        isActive: true,
+        isVerified: false,
+      });
+    } catch (mongoErr: any) {
+      console.warn("[MongoDB] Owner register sync warning:", mongoErr.message);
+    }
+
     return NextResponse.json({
       success: true,
       data: {

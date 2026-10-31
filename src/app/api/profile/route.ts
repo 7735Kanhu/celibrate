@@ -44,6 +44,21 @@ export async function PATCH(request: Request) {
       },
     });
 
+    // Also sync updated profile to MongoDB
+    try {
+      const { syncUserToMongo } = await import("@/lib/mongodb");
+      await syncUserToMongo({
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        city: updatedUser.city,
+        role: updatedUser.role,
+        prismaId: updatedUser.id,
+      });
+    } catch (mongoErr: any) {
+      console.warn("[MongoDB] Profile sync warning:", mongoErr.message);
+    }
+
     return NextResponse.json({
       success: true,
       user: updatedUser,

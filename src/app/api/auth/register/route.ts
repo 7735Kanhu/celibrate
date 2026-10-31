@@ -33,6 +33,24 @@ export async function POST(request: Request) {
       },
     });
 
+    // Also persist user to MongoDB
+    try {
+      const { syncUserToMongo } = await import("@/lib/mongodb");
+      await syncUserToMongo({
+        name: user.name,
+        email: user.email,
+        password: hashedPassword,
+        phone: user.phone,
+        city: user.city,
+        role: user.role,
+        prismaId: user.id,
+        isActive: user.isActive,
+        isVerified: user.isVerified,
+      });
+    } catch (mongoErr: any) {
+      console.warn("[MongoDB] Register sync warning:", mongoErr.message);
+    }
+
     // Link any previous enquiries matching email or phone
     try {
       const linkConditions: any[] = [

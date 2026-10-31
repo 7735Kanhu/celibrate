@@ -33,7 +33,7 @@ export async function convertOrDirectBooking(params: CreateBookingParams) {
 
   const slot = params.timeSlot || "Full Day";
 
-  return await prisma.$transaction(async (tx) => {
+  const booking = await prisma.$transaction(async (tx) => {
     // 1. Verify venue existence and ownership authorization
     const venue = await tx.venue.findUnique({
       where: { id: params.venueId },
@@ -235,4 +235,21 @@ export async function convertOrDirectBooking(params: CreateBookingParams) {
 
     return booking;
   });
+
+  // Sync enquiry status to BOOKED in MongoDB
+  if (params.enquiryId) {
+    try {
+      const { connectMongo } = await import("./mongodb");
+      const { MongoEnquiry } = await import("@/models/MongoEnquiry");
+      await connectMongo();
+      await MongoEnquiry.updateOne(
+        { $or: [{ prismaEnquiryId: params.enquiryId }, { enquiryNumber: params.enquiryId }] },
+        { $set: { status: "BOOKED", updatedAt: new Date() } }
+      );
+    } catch (mErr: any) {
+      console.warn("[MongoDB] Booking conversion sync warning:", mErr.message);
+    }
+  }
+
+  return booking;
 }

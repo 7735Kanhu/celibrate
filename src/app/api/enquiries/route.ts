@@ -83,23 +83,17 @@ export async function POST(request: Request) {
 
     // Also persist / sync user to MongoDB
     try {
-      await connectMongo();
-      await MongoUser.findOneAndUpdate(
-        { email: normalizedEmail },
-        {
-          $set: {
-            name: customerName,
-            email: normalizedEmail,
-            password: hashedPassword,
-            phone: customerPhone,
-            role: existingUser?.role || "CUSTOMER",
-            prismaId: assignedUserId,
-            isActive: true,
-            isVerified: true,
-          },
-        },
-        { upsert: true, new: true }
-      );
+      const { syncUserToMongo } = await import("@/lib/mongodb");
+      await syncUserToMongo({
+        name: customerName,
+        email: normalizedEmail,
+        password: hashedPassword,
+        phone: customerPhone,
+        role: existingUser?.role || "CUSTOMER",
+        prismaId: assignedUserId,
+        isActive: true,
+        isVerified: true,
+      });
     } catch (mongoErr: any) {
       console.warn("[MongoDB] User sync warning:", mongoErr.message);
     }
@@ -145,10 +139,10 @@ export async function POST(request: Request) {
 
     // Persist Enquiry to MongoDB
     try {
-      await connectMongo();
-      await MongoEnquiry.create({
+      const { syncEnquiryToMongo } = await import("@/lib/mongodb");
+      await syncEnquiryToMongo({
         enquiryNumber,
-        userId: assignedUserId,
+        userId: targetUserId,
         prismaEnquiryId: enquiry.id,
         venueId: venue.id,
         venueName: venue.name,
@@ -165,7 +159,7 @@ export async function POST(request: Request) {
         status: "NEW",
         autoCreatedAccount: isNewAccount,
       });
-      console.log(`[MongoDB] Enquiry ${enquiryNumber} stored in MongoDB`);
+      console.log(`[MongoDB] Enquiry ${enquiryNumber} stored in MongoDB (celibrate)`);
     } catch (mongoErr: any) {
       console.warn("[MongoDB] Enquiry save warning:", mongoErr.message);
     }
@@ -289,6 +283,65 @@ export async function GET(request: Request) {
         userConditions.push({ customerPhone: currentUser.phone.trim() });
       }
       andConditions.push({ OR: userConditions });
+
+      // Dual-DB sync check: ensure enquiries from MongoDB are present in SQLite
+      try {
+        const { connectMongo } = await import("@/lib/mongodb");
+        const { MongoEnquiry } = await import("@/models/MongoEnquiry");
+        await connectMongo();
+        const mongoEnqs = await MongoEnquiry.find({
+          $or: [
+            { customerEmail: currentUser.email.toLowerCase().trim() },
+            ...(currentUser.phone ? [{ customerPhone: currentUser.phone.trim() }] : []),
+          ],
+        }).lean();
+
+        for (const me of mongoEnqs) {
+          const exists = await prisma.enquiry.findUnique({
+            where: { enquiryNumber: me.enquiryNumber },
+          });
+          if (!exists) {
+            let venue = await prisma.venue.findUnique({ where: { id: me.venueId } });
+            if (!venue && me.venueName) {
+              venue = await prisma.venue.findFirst({
+                where: { name: { contains: me.venueName } },
+              });
+            }
+            if (!venue) {
+              venue = await prisma.venue.findFirst();
+            }
+            if (venue) {
+              const created = await prisma.enquiry.create({
+                data: {
+                  enquiryNumber: me.enquiryNumber,
+                  userId: currentUser.id,
+                  venueId: venue.id,
+                  customerName: me.customerName,
+                  customerPhone: me.customerPhone,
+                  customerEmail: me.customerEmail.toLowerCase().trim(),
+                  eventType: me.eventType,
+                  eventDate: new Date(me.eventDate),
+                  guestCount: me.guestCount,
+                  preferredTime: me.preferredTime || "Evening",
+                  budget: me.budget || "Not Specified",
+                  message: me.message || null,
+                  status: me.status || "NEW",
+                  createdAt: me.createdAt ? new Date(me.createdAt) : new Date(),
+                },
+              });
+              if (me.services && Array.isArray(me.services)) {
+                for (const s of me.services) {
+                  await prisma.enquiryService.create({
+                    data: { enquiryId: created.id, serviceName: s },
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (syncErr: any) {
+        console.warn("[Enquiry GET] MongoDB customer sync warning:", syncErr.message);
+      }
     } else if (currentUser.role === "VENUE_OWNER") {
       // Owner sees ONLY enquiries for venues they own
       andConditions.push({ venue: { ownerId: currentUser.id } });

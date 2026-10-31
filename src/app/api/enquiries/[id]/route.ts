@@ -216,6 +216,21 @@ export async function PATCH(
       return updatedEnquiry;
     });
 
+    // Sync updated status to MongoDB
+    if (status && status !== enquiry.status) {
+      try {
+        const { connectMongo } = await import("@/lib/mongodb");
+        const { MongoEnquiry } = await import("@/models/MongoEnquiry");
+        await connectMongo();
+        await MongoEnquiry.updateOne(
+          { $or: [{ enquiryNumber: enquiry.enquiryNumber }, { prismaEnquiryId: id }] },
+          { $set: { status, updatedAt: new Date() } }
+        );
+      } catch (mongoErr: any) {
+        console.warn("[MongoDB] Status update sync warning:", mongoErr.message);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: { enquiry: result },
